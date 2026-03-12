@@ -264,7 +264,7 @@ header{
         <div class="g-dot" style="background:#fbbc05;"></div>
         <div class="g-dot" style="background:#34a853;"></div>
       </div>
-      <span>Google Gemini 2.0 Flash Lite</span>
+      <span>Google Gemini 3 Flash</span>
     </div>
   </div>
 </div>
@@ -381,7 +381,7 @@ header{
           <div class="av">G</div>
           <div>
             <div class="bubble">
-              Xin chào! Tôi là <strong>EVN AI Brain</strong> — được hỗ trợ bởi <strong>Google Gemini 2.0 Flash Lite</strong>. 🧠⚡<br><br>
+              Xin chào! Tôi là <strong>EVN AI Brain</strong> — được hỗ trợ bởi <strong>Google Gemini 3 Flash</strong>. 🧠⚡<br><br>
               Hãy tải tài liệu lên để tôi học, hoặc hỏi tôi bất cứ điều gì về:<br>
               • 🏗️ Đấu thầu, xét thầu theo Luật 22/2023/QH15<br>
               • 📋 Soạn tờ trình, báo cáo, biên bản EVNHCMC<br>
@@ -389,7 +389,7 @@ header{
               • 🔒 An toàn điện, phiếu công tác<br><br>
               Bạn cần hỗ trợ gì?
             </div>
-            <div class="bmeta">Gemini 2.0 Flash Lite • Vừa xong</div>
+            <div class="bmeta">Gemini 3 Flash • Vừa xong</div>
           </div>
         </div>
       </div>
@@ -472,7 +472,7 @@ header{
     <!-- ══ DASHBOARD ══ -->
     <div id="panel-dashboard" class="panel">
       <div class="rtitle" style="font-size:17px;">📊 Dashboard · EVN AI Brain</div>
-      <div class="rsub" style="margin-bottom:8px;">Google Gemini 2.0 Flash Lite · EVNHCMC · <span id="dashDate"></span></div>
+      <div class="rsub" style="margin-bottom:8px;">Google Gemini 3 Flash · EVNHCMC · <span id="dashDate"></span></div>
 
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
         <div class="card" style="text-align:center;border-top:3px solid var(--gemini);">
@@ -510,7 +510,7 @@ header{
           <div>1️⃣ Vào <strong>aistudio.google.com/apikey</strong> → Đăng nhập Google</div>
           <div>2️⃣ Nhấn <strong>"Create API Key"</strong> → Chọn project → Sao chép key</div>
           <div>3️⃣ Nhấn <strong>"🔑 Đổi key"</strong> ở góc trên phải để nhập key mới</div>
-          <div>✅ <strong>Miễn phí:</strong> 60 request/phút · 1,500 request/ngày · Gemini 2.0 Flash Lite</div>
+          <div>✅ <strong>Miễn phí:</strong> 60 request/phút · 1,500 request/ngày · Gemini 3 Flash</div>
         </div>
       </div>
     </div>
@@ -524,7 +524,7 @@ header{
 // CONFIG
 // ══════════════════════════════════════════════
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
 // ══════════════════════════════════════════════
 // STATE
@@ -707,7 +707,7 @@ function addUserMsg(txt) {
 function addAI(html) {
   const b = document.getElementById('chatBody');
   const t = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
-  b.innerHTML+=`<div class="msg ai"><div class="av">G</div><div><div class="bubble">${html}</div><div class="bmeta">Gemini 2.0 Flash Lite • ${t} • 🧠 ${brain.docs.length} tài liệu</div></div></div>`;
+  b.innerHTML+=`<div class="msg ai"><div class="av">G</div><div><div class="bubble">${html}</div><div class="bmeta">Gemini 3 Flash • ${t} • 🧠 ${brain.docs.length} tài liệu</div></div></div>`;
   b.scrollTop=b.scrollHeight;
 }
 function addTyping() {
