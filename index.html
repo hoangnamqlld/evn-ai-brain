@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVN AI Brain — Gemini Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --blue:#003f8a; --blue2:#0057c2; --gold:#f5a623; --green:#16a34a;
+  --red:#dc2626; --gemini:#4285f4; --gemini2:#34a853;
+  --bg:#f0f4f9; --surface:#fff; --surface2:#eef2f8; --border:#d4dce8;
+  --text:#0f1f35; --text2:#526070; --radius:13px;
+  --shadow:0 2px 16px rgba(0,63,138,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+/* ── SETUP OVERLAY ── */
+#setupOverlay {
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#001f5c 0%,#003f8a 50%,#1a56db 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.setup-box {
+  background:#fff;border-radius:20px;padding:40px;width:480px;max-width:94vw;
+  box-shadow:0 24px 64px rgba(0,0,0,.3);
+}
+.setup-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+.setup-logo-mark{width:48px;height:48px;background:var(--gold);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#001f5c;}
+.setup-title{font-size:20px;font-weight:800;color:var(--blue);}
+.setup-sub{font-size:12px;color:var(--text2);margin-top:2px;}
+.setup-step{display:flex;gap:10px;align-items:flex-start;padding:12px;background:var(--surface2);border-radius:10px;margin-bottom:8px;}
+.setup-step .sn{width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.setup-step .st{font-size:12.5px;line-height:1.6;color:var(--text);}
+.setup-step .st a{color:var(--gemini);font-weight:600;}
+.key-input{width:100%;border:2px solid var(--border);border-radius:10px;padding:12px 16px;font-family:inherit;font-size:14px;outline:none;margin:14px 0 8px;transition:border-color .2s;}
+.key-input:focus{border-color:var(--gemini);}
+.key-hint{font-size:11px;color:var(--text2);margin-bottom:16px;line-height:1.6;}
+.key-hint span{color:var(--red);font-weight:600;}
+.start-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--gemini),#1a73e8);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(66,133,244,.4);}
+.gemini-badge{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:14px;font-size:11px;color:var(--text2);}
+.gemini-badge .gb{display:flex;gap:2px;}
+.g-dot{width:8px;height:8px;border-radius:50%;}
+
+/* ── HEADER ── */
+header{
+  background:linear-gradient(120deg,#001f5c,#003f8a 50%,#005bb5);
+  color:#fff;padding:0 28px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 20px rgba(0,31,92,.35);position:sticky;top:0;z-index:200;
+}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:40px;height:40px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#001f5c;box-shadow:0 2px 8px rgba(245,166,35,.5);}
+.logo-name{font-size:16px;font-weight:700;}
+.logo-sub{font-size:10px;opacity:.65;margin-top:1px;}
+.hpill{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);cursor:pointer;}
+.hpill.live{color:#6effa8;border-color:#6effa8;background:rgba(110,255,168,.08);}
+.hpill.gemini-pill{background:linear-gradient(135deg,rgba(66,133,244,.2),rgba(52,168,83,.2));border-color:rgba(66,133,244,.4);color:#93c5fd;}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex:1;height:calc(100vh - 64px);}
+
+/* ── SIDEBAR ── */
+.sidebar{width:252px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:14px 10px;gap:2px;overflow-y:auto;flex-shrink:0;}
+.s-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text2);padding:0 8px;margin:10px 0 4px;}
+.nbtn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;border:none;background:transparent;cursor:pointer;width:100%;text-align:left;font-family:inherit;font-size:12.5px;color:var(--text2);font-weight:500;transition:all .14s;}
+.nbtn:hover{background:var(--surface2);color:var(--blue);}
+.nbtn.active{background:linear-gradient(135deg,#dbeafe,#eff6ff);color:var(--blue);font-weight:700;}
+.nbtn .ni{font-size:15px;width:20px;text-align:center;}
+.nbtn .badge{margin-left:auto;font-size:9px;font-weight:700;background:var(--gold);color:#7a3800;padding:1px 5px;border-radius:6px;}
+.nbtn .badge.g{background:#dcfce7;color:#166534;}
+.nbtn .badge.blue{background:#dbeafe;color:#1e40af;}
+
+/* ── BRAIN STATUS ── */
+.brain-stat{margin:8px 0;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:9px;padding:9px 11px;}
+.bs-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.bs-title{font-size:11px;font-weight:700;color:var(--green);}
+.bs-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.bs-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;}
+.bs-item{background:rgba(255,255,255,.7);border-radius:6px;padding:4px 6px;text-align:center;}
+.bs-num{font-size:15px;font-weight:800;color:var(--blue);}
+.bs-lbl{font-size:9px;color:var(--text2);}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.tabbar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 18px;overflow-x:auto;gap:0;}
+.tab{padding:12px 16px;font-size:12px;font-weight:500;color:var(--text2);border:none;background:transparent;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;font-family:inherit;transition:all .14s;}
+.tab:hover{color:var(--blue);}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700;}
+.panel{display:none;flex:1;overflow-y:auto;padding:20px;flex-direction:column;gap:16px;}
+.panel.active{display:flex;}
+#panel-chat{padding:0;gap:0;}
+
+/* ── UPLOAD ── */
+.ftype-row{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:4px;}
+.ftype-card{border:2px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;background:var(--surface2);transition:all .17s;}
+.ftype-card.word{border-top:3px solid #2b579a;}
+.ftype-card.excel{border-top:3px solid #217346;}
+.ftype-card.pdf{border-top:3px solid #f40f02;}
+.ftype-card.image{border-top:3px solid var(--gemini);}
+.ftype-card.txt{border-top:3px solid var(--gold);}
+.ft-icon{font-size:26px;margin-bottom:5px;}
+.ft-name{font-size:11px;font-weight:700;color:var(--text);}
+.ft-ext{font-size:9.5px;color:var(--text2);margin-top:1px;}
+
+.upload-zone{border:2px dashed var(--border);border-radius:13px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden;}
+.upload-zone::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(66,133,244,.03),rgba(52,168,83,.03));opacity:0;transition:opacity .2s;}
+.upload-zone:hover::before,.upload-zone.dragover::before{opacity:1;}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--gemini);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.um-icon{font-size:40px;margin-bottom:8px;}
+.um-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+.um-sub{font-size:11.5px;color:var(--text2);line-height:1.7;}
+.um-tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
+.um-tag{padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700;}
+
+.file-list{display:flex;flex-direction:column;gap:7px;}
+.fi{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 13px;transition:all .15s;}
+.fi-ico{font-size:22px;flex-shrink:0;}
+.fi-info{flex:1;min-width:0;}
+.fi-name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fi-meta{font-size:10px;color:var(--text2);margin-top:1px;}
+.fi-bar{height:4px;background:var(--surface2);border-radius:3px;margin-top:5px;}
+.fi-fill{height:4px;border-radius:3px;background:linear-gradient(90deg,var(--gemini),var(--gemini2));transition:width .4s;}
+.fi-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;flex-shrink:0;}
+.fi-status.reading{background:#fef9c3;color:#854d0e;}
+.fi-status.done{background:#dcfce7;color:#166534;}
+.fi-status.err{background:#fee2e2;color:#991b1b;}
+
+/* ── CHAT ── */
+.chat-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
+.msg{display:flex;gap:10px;}
+.msg.user{flex-direction:row-reverse;margin-left:auto;max-width:80%;}
+.msg.ai{max-width:85%;}
+.av{width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.msg.ai .av{background:linear-gradient(135deg,var(--gemini),var(--gemini2));color:#fff;}
+.msg.user .av{background:var(--gold);color:#7a3800;}
+.bubble{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.7;box-shadow:0 1px 5px rgba(0,0,0,.04);}
+.msg.user .bubble{background:linear-gradient(135deg,var(--blue),#0055aa);color:#fff;border-color:transparent;}
+.bmeta{font-size:9.5px;color:var(--text2);margin-top:3px;}
+.msg.user .bmeta{text-align:right;color:rgba(255,255,255,.5);}
+.typing-dots{display:flex;gap:4px;padding:4px 0;align-items:center;}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--gemini);opacity:.3;animation:td 1.3s infinite;}
+.typing-dots span:nth-child(2){animation-delay:.2s;}
+.typing-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.3;}30%{transform:translateY(-6px);opacity:1;}}
+
+.chat-input{border-top:1px solid var(--border);background:var(--surface);padding:12px 20px;}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+.chip{padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);font-size:11px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .12s;}
+.chip:hover,.chip.on{border-color:var(--gemini);color:var(--gemini);background:#eff6ff;}
+.chip.on{background:var(--gemini);color:#fff;border-color:var(--gemini);}
+.irow{display:flex;gap:8px;align-items:flex-end;}
+.ibox{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:9px 13px;font-family:inherit;font-size:13px;resize:none;min-height:44px;max-height:120px;outline:none;transition:border-color .18s;background:var(--surface2);}
+.ibox:focus{border-color:var(--gemini);background:#fff;}
+.sbtn{background:linear-gradient(135deg,var(--gemini),#1a73e8);color:#fff;border:none;border-radius:10px;width:44px;height:44px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .17s;}
+.sbtn:hover{transform:scale(1.07);box-shadow:0 4px 14px rgba(66,133,244,.4);}
+.sbtn:disabled{opacity:.4;transform:none;cursor:not-allowed;}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);}
+.ctitle{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--gold);}
+.row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.rtitle{font-size:15px;font-weight:700;color:var(--blue);}
+.rsub{font-size:11px;color:var(--text2);margin-top:2px;}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:11px 15px;font-size:12px;color:var(--blue);display:flex;gap:8px;align-items:flex-start;line-height:1.6;}
+
+.btn-p{padding:8px 18px;border:none;border-radius:9px;color:#fff;background:linear-gradient(135deg,var(--gemini),#1a73e8);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .17s;}
+.btn-p:hover{box-shadow:0 4px 14px rgba(66,133,244,.4);transform:translateY(-1px);}
+.btn-o{padding:6px 14px;border:1.5px solid var(--blue);border-radius:8px;color:var(--blue);background:transparent;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .14s;}
+.btn-o:hover{background:var(--blue);color:#fff;}
+
+/* ── COMPOSE ── */
+.dtype-row{display:flex;gap:6px;flex-wrap:wrap;}
+.dchip{padding:4px 12px;border-radius:16px;border:1.5px solid var(--border);background:var(--surface2);font-size:11px;font-weight:600;cursor:pointer;transition:all .13s;color:var(--text2);}
+.dchip:hover{border-color:var(--gemini);color:var(--gemini);}
+.dchip.on{border-color:var(--gemini);background:var(--gemini);color:#fff;}
+.preview-area{background:#fafbfd;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12.5px;line-height:1.9;min-height:160px;white-space:pre-wrap;position:relative;color:var(--text);}
+.ph{color:var(--text2);font-style:italic;text-align:center;padding-top:50px;}
+.copy-btn{position:absolute;top:9px;right:9px;background:var(--gemini);color:#fff;border:none;padding:4px 10px;border-radius:7px;font-size:10.5px;cursor:pointer;font-family:inherit;font-weight:600;}
+
+/* ── STYLE CARDS ── */
+.sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;}
+.scard{border:2px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:all .17s;}
+.scard:hover{border-color:var(--gemini);}
+.scard.on{border-color:var(--gemini);background:#eff6ff;}
+.scard .sn{font-size:12.5px;font-weight:700;}
+.scard .sd{font-size:10.5px;color:var(--text2);margin-top:2px;line-height:1.5;}
+.stag{display:inline-block;margin-top:5px;padding:1px 7px;border-radius:6px;font-size:9px;font-weight:700;background:var(--gemini);color:#fff;}
+
+/* ── KNOWLEDGE ── */
+.know-tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;margin:2px;}
+.know-tag.term{background:#dcfce7;color:#166534;}
+.know-tag.doc{background:#dbeafe;color:#1e40af;}
+.know-tag.style{background:#ede9fe;color:#5b21b6;}
+.know-box{background:#fafbfd;border:1px solid var(--border);border-radius:9px;padding:12px;font-size:12px;line-height:1.8;max-height:180px;overflow-y:auto;white-space:pre-wrap;}
+
+/* ── PROGRESS BARS ── */
+.pbar-wrap{display:flex;flex-direction:column;gap:8px;}
+.pbar-row{display:flex;align-items:center;gap:10px;}
+.pbar-label{font-size:12px;font-weight:500;width:185px;white-space:nowrap;}
+.pbar-track{flex:1;background:var(--surface2);border-radius:5px;height:8px;}
+.pbar-fill{height:8px;border-radius:5px;}
+.pbar-pct{font-size:11px;font-weight:700;width:34px;text-align:right;}
+
+@keyframes spin{to{transform:rotate(360deg);}}
+.spin{width:16px;height:16px;border:2px solid rgba(66,133,244,.2);border-top-color:var(--gemini);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;}
+
+.notif{position:fixed;bottom:22px;right:22px;z-index:9999;color:#fff;padding:11px 17px;border-radius:10px;font-size:12.5px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2);transform:translateY(70px);opacity:0;transition:all .28s;pointer-events:none;max-width:340px;line-height:1.5;}
+.notif.show{transform:translateY(0);opacity:1;}
+.notif.ok{background:var(--green);}
+.notif.err{background:var(--red);}
+.notif.info{background:var(--gemini);}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SETUP OVERLAY ═══════════════ -->
+<div id="setupOverlay">
+  <div class="setup-box">
+    <div class="setup-logo">
+      <div class="setup-logo-mark">EVN</div>
+      <div>
+        <div class="setup-title">EVN AI Brain</div>
+        <div class="setup-sub">Powered by Google Gemini · EVNHCMC</div>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <div class="sn">1</div>
+      <div class="st">Truy cập <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> → Đăng nhập Google → Nhấn <strong>"Create API Key"</strong></div>
+    </div>
+    <div class="setup-step">
+      <div class="sn">2</div>
+      <div class="st">Sao chép API key (dạng: <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:11px;">AIzaSy...</code>) và dán vào ô bên dưới</div>
+    </div>
+    <div class="setup-step">
+      <div class="sn">3</div>
+      <div class="st">Nhấn <strong>"Bắt đầu"</strong> — Hệ thống sẽ lưu key vào trình duyệt, lần sau không cần nhập lại</div>
+    </div>
+
+    <input type="password" class="key-input" id="apiKeyInput" placeholder="Dán API key vào đây: AIzaSy..."
+      onkeydown="if(event.key==='Enter') startApp()">
+    <div class="key-hint">
+      🆓 Gemini API <strong>miễn phí</strong> 60 lần/phút · 1,500 lần/ngày<br>
+      <span>⚠️ Không chia sẻ API key cho người khác</span>
+    </div>
+    <button class="start-btn" onclick="startApp()">🚀 Bắt đầu sử dụng EVN AI Brain</button>
+    <div class="gemini-badge">
+      <span>Powered by</span>
+      <div class="gb">
+        <div class="g-dot" style="background:#4285f4;"></div>
+        <div class="g-dot" style="background:#ea4335;"></div>
+        <div class="g-dot" style="background:#fbbc05;"></div>
+        <div class="g-dot" style="background:#34a853;"></div>
+      </div>
+      <span>Google Gemini 2.0 Flash</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">EVN</div>
+    <div>
+      <div class="logo-name">EVN AI Brain — Gemini Edition</div>
+      <div class="logo-sub">Học đa định dạng · Word · Excel · PDF · Ảnh · EVNHCMC</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:9px;">
+    <span class="hpill gemini-pill">🤖 Gemini 2.0 Flash</span>
+    <span class="hpill live">● <span id="hBrainCount">0</span> tài liệu đã học</span>
+    <span class="hpill" onclick="resetKey()" style="cursor:pointer;color:#fca5a5;" title="Đổi API key">🔑 Đổi key</span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+    <div class="brain-stat">
+      <div class="bs-top"><span class="bs-title">🧠 Bộ não Gemini</span><div class="bs-dot"></div></div>
+      <div class="bs-grid">
+        <div class="bs-item"><div class="bs-num" id="sc-docs">0</div><div class="bs-lbl">Tài liệu</div></div>
+        <div class="bs-item"><div class="bs-num" id="sc-styles">0</div><div class="bs-lbl">Phong cách</div></div>
+        <div class="bs-item"><div class="bs-num" id="sc-terms">0</div><div class="bs-lbl">Thuật ngữ</div></div>
+        <div class="bs-item"><div class="bs-num" id="sc-pages">0</div><div class="bs-lbl">Trang học</div></div>
+      </div>
+    </div>
+
+    <div class="s-label">Chức năng</div>
+    <button class="nbtn active" onclick="sw('upload',this)"><span class="ni">📁</span> Tải & Học tài liệu<span class="badge g">MỚI</span></button>
+    <button class="nbtn" onclick="sw('chat',this)"><span class="ni">💬</span> Chat với AI</button>
+    <button class="nbtn" onclick="sw('compose',this)"><span class="ni">📝</span> Soạn văn bản<span class="badge">HOT</span></button>
+    <button class="nbtn" onclick="sw('knowledge',this)"><span class="ni">🧠</span> Xem bộ não</button>
+    <button class="nbtn" onclick="sw('dashboard',this)"><span class="ni">📊</span> Dashboard</button>
+
+    <div class="s-label">Định dạng hỗ trợ</div>
+    <div style="padding:6px 8px;font-size:11px;color:var(--text2);line-height:1.9;">
+      📘 Word (.docx)<br>
+      📗 Excel (.xlsx .csv)<br>
+      📕 PDF (.pdf)<br>
+      🖼️ Hình ảnh (.jpg .png)<br>
+      📄 Text (.txt)
+    </div>
+
+    <div class="s-label">Chuyên ngành</div>
+    <button class="nbtn" onclick="setEx('dauthaau')"><span class="ni">🏗️</span> Đấu thầu</button>
+    <button class="nbtn" onclick="setEx('hanh-chinh')"><span class="ni">📋</span> Hành chính</button>
+    <button class="nbtn" onclick="setEx('ky-thuat')"><span class="ni">⚡</span> Kỹ thuật điện</button>
+    <button class="nbtn" onclick="setEx('an-toan')"><span class="ni">🔒</span> An toàn điện</button>
+  </div>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+    <div class="tabbar">
+      <button class="tab active" onclick="swt(this,'upload')">📁 Học tài liệu</button>
+      <button class="tab" onclick="swt(this,'chat')">💬 Chat AI</button>
+      <button class="tab" onclick="swt(this,'compose')">📝 Soạn văn bản</button>
+      <button class="tab" onclick="swt(this,'knowledge')">🧠 Bộ não</button>
+      <button class="tab" onclick="swt(this,'dashboard')">📊 Dashboard</button>
+    </div>
+
+    <!-- ══ UPLOAD PANEL ══ -->
+    <div id="panel-upload" class="panel active">
+      <div class="row">
+        <div><div class="rtitle">📁 Tải Tài Liệu — AI Tự Học</div><div class="rsub">Gemini đọc hiểu Word · Excel · PDF · Hình ảnh · Text</div></div>
+        <button class="btn-o" onclick="clearBrain()">🗑️ Xóa bộ não</button>
+      </div>
+
+      <div class="ftype-row">
+        <div class="ftype-card word"><div class="ft-icon">📘</div><div class="ft-name">Word</div><div class="ft-ext">.doc · .docx</div></div>
+        <div class="ftype-card excel"><div class="ft-icon">📗</div><div class="ft-name">Excel</div><div class="ft-ext">.xls · .xlsx · .csv</div></div>
+        <div class="ftype-card pdf"><div class="ft-icon">📕</div><div class="ft-name">PDF</div><div class="ft-ext">.pdf</div></div>
+        <div class="ftype-card image"><div class="ft-icon">🖼️</div><div class="ft-name">Hình ảnh</div><div class="ft-ext">.jpg · .png · .webp</div></div>
+        <div class="ftype-card txt"><div class="ft-icon">📄</div><div class="ft-name">Text</div><div class="ft-ext">.txt · .md</div></div>
+      </div>
+
+      <div class="upload-zone" id="dropZone">
+        <input type="file" id="fileInput" multiple
+          accept=".docx,.doc,.xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,.webp,.txt,.md"
+          onchange="handleFiles(this.files)">
+        <div class="um-icon">📂</div>
+        <div class="um-title">Kéo thả file hoặc nhấp để chọn</div>
+        <div class="um-sub">Gemini sẽ đọc và học từ tất cả định dạng<br>Tải nhiều file cùng lúc được · Càng nhiều mẫu → AI càng thông minh</div>
+        <div class="um-tags">
+          <span class="um-tag" style="background:#dbeafe;color:#1e40af;">📘 Word</span>
+          <span class="um-tag" style="background:#dcfce7;color:#166534;">📗 Excel</span>
+          <span class="um-tag" style="background:#fee2e2;color:#991b1b;">📕 PDF</span>
+          <span class="um-tag" style="background:#ede9fe;color:#5b21b6;">🖼️ Ảnh</span>
+          <span class="um-tag" style="background:#ffedd5;color:#9a3412;">📄 Text</span>
+        </div>
+      </div>
+
+      <div class="card" id="fileListCard" style="display:none;">
+        <div class="ctitle"><div class="cdot"></div>Tài liệu đã tải <span id="fileCount" style="font-size:11px;color:var(--text2);font-weight:400;margin-left:4px;"></span></div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+
+      <div id="learnWrap" style="display:none;">
+        <button class="btn-p" style="width:100%;padding:13px;font-size:14px;" onclick="learnAll()">
+          🧠 Phân tích tất cả & Đưa vào bộ não Gemini
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ CHAT PANEL ══ -->
+    <div id="panel-chat" class="panel" style="padding:0;gap:0;">
+      <div class="chat-body" id="chatBody">
+        <div class="msg ai">
+          <div class="av">G</div>
+          <div>
+            <div class="bubble">
+              Xin chào! Tôi là <strong>EVN AI Brain</strong> — được hỗ trợ bởi <strong>Google Gemini 2.0 Flash</strong>. 🧠⚡<br><br>
+              Hãy tải tài liệu lên để tôi học, hoặc hỏi tôi bất cứ điều gì về:<br>
+              • 🏗️ Đấu thầu, xét thầu theo Luật 22/2023/QH15<br>
+              • 📋 Soạn tờ trình, báo cáo, biên bản EVNHCMC<br>
+              • ⚡ Kỹ thuật điện lực, QCVN, TCVN<br>
+              • 🔒 An toàn điện, phiếu công tác<br><br>
+              Bạn cần hỗ trợ gì?
+            </div>
+            <div class="bmeta">Gemini 2.0 Flash • Vừa xong</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input">
+        <div class="chips">
+          <span class="chip on" onclick="tChip(this)">🏗️ Đấu thầu</span>
+          <span class="chip" onclick="tChip(this)">📋 Tờ trình</span>
+          <span class="chip" onclick="tChip(this)">📊 Báo cáo</span>
+          <span class="chip" onclick="tChip(this)">📄 Biên bản</span>
+          <span class="chip" onclick="tChip(this)">⚡ Kỹ thuật</span>
+          <span class="chip" onclick="tChip(this)">🔒 An toàn</span>
+        </div>
+        <div class="irow">
+          <textarea class="ibox" id="userInput" placeholder="Nhập câu hỏi hoặc yêu cầu... (Enter gửi, Shift+Enter xuống dòng)" rows="2" onkeydown="hKey(event)"></textarea>
+          <button class="sbtn" id="sBtn" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ COMPOSE PANEL ══ -->
+    <div id="panel-compose" class="panel">
+      <div class="row"><div><div class="rtitle">📝 Soạn Văn Bản Chuyên Nghiệp</div><div class="rsub">Gemini áp dụng kiến thức học từ tài liệu của bạn</div></div></div>
+
+      <div class="card">
+        <div class="ctitle"><div class="cdot"></div>Loại văn bản</div>
+        <div class="dtype-row" id="dtypes">
+          <span class="dchip on" onclick="selD(this,'to-trinh')">📋 Tờ trình</span>
+          <span class="dchip" onclick="selD(this,'bao-cao')">📊 Báo cáo</span>
+          <span class="dchip" onclick="selD(this,'bien-ban')">📄 Biên bản họp</span>
+          <span class="dchip" onclick="selD(this,'cong-van')">📨 Công văn</span>
+          <span class="dchip" onclick="selD(this,'quyet-dinh')">⚖️ Quyết định</span>
+          <span class="dchip" onclick="selD(this,'ho-so-thau')">🏗️ Hồ sơ thầu</span>
+          <span class="dchip" onclick="selD(this,'nghiem-thu')">✅ Nghiệm thu</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><div class="cdot"></div>Phong cách lãnh đạo</div>
+        <div class="sgrid">
+          <div class="scard on" onclick="selS(this,'chinh-thong')"><div class="sn">📌 Chính thống · Trang trọng</div><div class="sd">Chuẩn hành chính EVNHCMC, súc tích</div><span class="stag">Mặc định</span></div>
+          <div class="scard" onclick="selS(this,'giam-doc')"><div class="sn">👔 Giám đốc · Quyết đoán</div><div class="sd">Ngắn gọn, tập trung kết quả, định hướng</div><span class="stag">Đã học</span></div>
+          <div class="scard" onclick="selS(this,'truong-phong')"><div class="sn">👩‍💼 Trưởng phòng · Chi tiết</div><div class="sd">Phân tích đầy đủ, có số liệu, logic</div><span class="stag">Đã học</span></div>
+          <div class="scard" onclick="selS(this,'ky-thuat')"><div class="sn">⚙️ Kỹ thuật · Chuyên sâu</div><div class="sd">Thuật ngữ điện lực, QCVN, TCVN</div><span class="stag">Đã học</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><div class="cdot"></div>Nội dung yêu cầu</div>
+        <textarea class="ibox" style="width:100%;min-height:85px;display:block;margin-bottom:11px;" id="cInput"
+          placeholder="Ví dụ: Soạn tờ trình xin phê duyệt mua sắm 50 công tơ điện tử 3 pha, giá trị 420 triệu đồng, áp dụng chỉ định thầu..."></textarea>
+        <button class="btn-p" style="width:100%;" onclick="compose()">✨ Soạn với Gemini AI</button>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><div class="cdot"></div>Kết quả</div>
+        <div class="preview-area" id="cOutput"><div class="ph">✨ Nhấn "Soạn với Gemini AI" để tạo văn bản chuẩn EVNHCMC</div></div>
+      </div>
+    </div>
+
+    <!-- ══ KNOWLEDGE PANEL ══ -->
+    <div id="panel-knowledge" class="panel">
+      <div class="row">
+        <div><div class="rtitle">🧠 Bộ Não — Kiến thức đã học</div><div class="rsub">Tích lũy từ tài liệu Word · Excel · PDF · Hình ảnh</div></div>
+        <button class="btn-o" onclick="exportBrain()">💾 Xuất JSON</button>
+      </div>
+      <div class="card" id="knowledgeCard">
+        <div class="ctitle"><div class="cdot"></div>Tài liệu đã học</div>
+        <div id="knowledgeContent"><div style="text-align:center;padding:28px;color:var(--text2);font-size:13px;">🧠 Chưa có tài liệu. Tải file lên để AI bắt đầu học.</div></div>
+      </div>
+      <div class="card" id="termsCard" style="display:none;">
+        <div class="ctitle"><div class="cdot"></div>Thuật ngữ chuyên ngành đã học</div>
+        <div id="termsContent"></div>
+      </div>
+      <div class="card" id="summaryCard" style="display:none;">
+        <div class="ctitle"><div class="cdot"></div>Tóm tắt kiến thức</div>
+        <div class="know-box" id="summaryContent"></div>
+      </div>
+    </div>
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="panel-dashboard" class="panel">
+      <div class="rtitle" style="font-size:17px;">📊 Dashboard · EVN AI Brain</div>
+      <div class="rsub" style="margin-bottom:8px;">Google Gemini 2.0 Flash · EVNHCMC · <span id="dashDate"></span></div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div class="card" style="text-align:center;border-top:3px solid var(--gemini);">
+          <div style="font-size:26px;font-weight:800;color:var(--gemini);" id="d-docs">0</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">Tài liệu đã học</div>
+        </div>
+        <div class="card" style="text-align:center;border-top:3px solid var(--green);">
+          <div style="font-size:26px;font-weight:800;color:var(--green);" id="d-terms">0</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">Thuật ngữ</div>
+        </div>
+        <div class="card" style="text-align:center;border-top:3px solid var(--gold);">
+          <div style="font-size:26px;font-weight:800;color:#ca8a04;" id="d-styles">0</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">Phong cách</div>
+        </div>
+        <div class="card" style="text-align:center;border-top:3px solid var(--blue);">
+          <div style="font-size:26px;font-weight:800;color:var(--blue);" id="d-pages">0</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">Trang đã đọc</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><div class="cdot"></div>Năng lực AI theo lĩnh vực</div>
+        <div class="pbar-wrap">
+          <div class="pbar-row"><span class="pbar-label">📋 Hành chính văn phòng</span><div class="pbar-track"><div class="pbar-fill" style="width:95%;background:linear-gradient(90deg,var(--green),#22c55e);"></div></div><span class="pbar-pct" style="color:var(--green);">95%</span></div>
+          <div class="pbar-row"><span class="pbar-label">⚡ Kỹ thuật điện lực</span><div class="pbar-track"><div class="pbar-fill" style="width:92%;background:linear-gradient(90deg,var(--blue),var(--blue2));"></div></div><span class="pbar-pct" style="color:var(--blue);">92%</span></div>
+          <div class="pbar-row"><span class="pbar-label">🏗️ Đấu thầu & Luật</span><div class="pbar-track"><div class="pbar-fill" style="width:88%;background:linear-gradient(90deg,var(--gold),#f59e0b);"></div></div><span class="pbar-pct" style="color:#ca8a04;">88%</span></div>
+          <div class="pbar-row"><span class="pbar-label">🔒 An toàn điện</span><div class="pbar-track"><div class="pbar-fill" style="width:85%;background:linear-gradient(90deg,var(--red),#ef4444);"></div></div><span class="pbar-pct" style="color:var(--red);">85%</span></div>
+          <div class="pbar-row"><span class="pbar-label" id="learnPct-label">🧠 Học từ tài liệu</span><div class="pbar-track"><div class="pbar-fill" id="learnPct-bar" style="width:0%;background:linear-gradient(90deg,var(--gemini),var(--gemini2));"></div></div><span class="pbar-pct" style="color:var(--gemini);" id="learnPct-val">0%</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ctitle"><div class="cdot"></div>Hướng dẫn lấy API Key miễn phí</div>
+        <div style="font-size:12.5px;line-height:2;color:var(--text);">
+          <div>1️⃣ Vào <strong>aistudio.google.com/apikey</strong> → Đăng nhập Google</div>
+          <div>2️⃣ Nhấn <strong>"Create API Key"</strong> → Chọn project → Sao chép key</div>
+          <div>3️⃣ Nhấn <strong>"🔑 Đổi key"</strong> ở góc trên phải để nhập key mới</div>
+          <div>✅ <strong>Miễn phí:</strong> 60 request/phút · 1,500 request/ngày · Gemini 2.0 Flash</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let apiKey = '';
+let expert = 'hanh-chinh';
+let docType = 'to-trinh';
+let styleMode = 'chinh-thong';
+let loading = false;
+let chatHistory = [];
+let uploadedFiles = [];
+let brain = { docs:[], styles:{}, terms:[], summary:'', totalPages:0 };
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+(function init() {
+  const saved = localStorage.getItem('evn_gemini_key');
+  if (saved) { apiKey = saved; hidSetup(); }
+  const savedBrain = localStorage.getItem('evn_brain_gemini');
+  if (savedBrain) try { brain = JSON.parse(savedBrain); } catch(e){}
+  document.getElementById('dashDate').textContent = new Date().toLocaleDateString('vi-VN');
+  updateUI();
+})();
+
+function startApp() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key || !key.startsWith('AIza')) {
+    notify('⚠️ API key không hợp lệ. Key bắt đầu bằng "AIza..."', 'err');
+    return;
+  }
+  apiKey = key;
+  localStorage.setItem('evn_gemini_key', key);
+  hidSetup();
+  notify('✅ Kết nối Gemini thành công! Hệ thống sẵn sàng.', 'ok');
+}
+
+function hidSetup() {
+  document.getElementById('setupOverlay').style.display = 'none';
+}
+
+function resetKey() {
+  localStorage.removeItem('evn_gemini_key');
+  apiKey = '';
+  document.getElementById('apiKeyInput').value = '';
+  document.getElementById('setupOverlay').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function sw(name, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+}
+function swt(el, name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active'); sw(name,null);
+}
+function setEx(type) {
+  expert = type; sw('chat',null);
+  const lbl = {
+    'dauthaau':'đấu thầu — Luật 22/2023/QH15',
+    'hanh-chinh':'hành chính văn phòng EVNHCMC',
+    'ky-thuat':'kỹ thuật điện lực QCVN/TCVN',
+    'an-toan':'an toàn điện EVNHCMC'
+  };
+  addAI(`Đã chuyển sang chuyên gia: <strong>${lbl[type]}</strong>. Sẵn sàng tư vấn!`);
+}
+function tChip(el){ el.classList.toggle('on'); }
+function selD(el,t){ document.querySelectorAll('#dtypes .dchip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); docType=t; }
+function selS(el,s){ document.querySelectorAll('.scard').forEach(c=>c.classList.remove('on')); el.classList.add('on'); styleMode=s; }
+
+// ══════════════════════════════════════════════
+// GEMINI API CALL
+// ══════════════════════════════════════════════
+async function callGemini(parts, systemPrompt='') {
+  const contents = [];
+  if (chatHistory.length > 0) {
+    chatHistory.forEach(h => contents.push({ role: h.role==='assistant'?'model':'user', parts:[{text:h.content}] }));
+  }
+  // Add current message
+  if (parts) contents.push({ role:'user', parts });
+
+  const body = {
+    contents,
+    systemInstruction: systemPrompt ? { parts:[{text:systemPrompt}] } : undefined,
+    generationConfig: { temperature:0.7, maxOutputTokens:2048 }
+  };
+
+  const r = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function callGeminiSimple(prompt) {
+  const r = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents:[{role:'user',parts:[{text:prompt}]}],
+      generationConfig:{temperature:0.5,maxOutputTokens:2048}
+    })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function callGeminiWithImage(base64, mime, textPrompt) {
+  const r = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents:[{role:'user',parts:[
+        {inlineData:{mimeType:mime,data:base64}},
+        {text:textPrompt}
+      ]}],
+      generationConfig:{temperature:0.5,maxOutputTokens:1024}
+    })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// ══════════════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════════════
+function hKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
+
+async function sendChat() {
+  if(loading||!apiKey) { if(!apiKey) notify('Vui lòng nhập API key Gemini!','err'); return; }
+  const inp = document.getElementById('userInput');
+  const txt = inp.value.trim(); if(!txt) return;
+  addUserMsg(txt); inp.value='';
+  loading=true; document.getElementById('sBtn').disabled=true;
+  const tid = addTyping();
+  chatHistory.push({role:'user',content:txt});
+  try {
+    const sys = buildSys();
+    const reply = await callGemini([{text:txt}], sys);
+    removeTyping(tid);
+    chatHistory.push({role:'assistant',content:reply});
+    addAI(reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+  } catch(e) {
+    removeTyping(tid);
+    addAI('⚠️ Lỗi: '+e.message+'. Kiểm tra lại API key Gemini.');
+    notify(e.message,'err');
+  }
+  loading=false; document.getElementById('sBtn').disabled=false;
+}
+
+function buildSys() {
+  const exMap = {
+    'dauthaau':'chuyên gia đấu thầu hàng đầu EVNHCMC, nắm vững Luật Đấu thầu 22/2023/QH15, Nghị định 24/2024/NĐ-CP',
+    'hanh-chinh':'chuyên gia hành chính văn phòng EVNHCMC, Nghị định 30/2020/NĐ-CP',
+    'ky-thuat':'kỹ sư điện lực EVNHCMC, am hiểu hệ thống điện 110kV/22kV/0.4kV, QCVN QTĐ, TCVN điện lực',
+    'an-toan':'chuyên gia an toàn điện EVNHCMC, phiếu công tác, lệnh công tác, quy trình an toàn'
+  };
+  const brainCtx = brain.docs.length>0
+    ? `\n\nBỘ NÃO ĐÃ HỌC TỪ ${brain.docs.length} TÀI LIỆU:\n- Tài liệu: ${brain.docs.slice(0,5).join(', ')}\n- Thuật ngữ: ${brain.terms.slice(0,15).join(', ')}\n- Tóm tắt: ${brain.summary.substring(0,300)}`
+    : '';
+  return `Bạn là EVN AI Brain — trợ lý thông minh chuyên nghiệp của Tổng Công ty Điện lực TP.HCM (EVNHCMC).
+Vai trò hiện tại: ${exMap[expert]||exMap['hanh-chinh']}.
+Trả lời tiếng Việt, chuyên nghiệp, đúng thuật ngữ chuyên ngành điện lực và hành chính EVN.
+Khi soạn văn bản: đúng thể thức EVNHCMC.${brainCtx}`;
+}
+
+function addUserMsg(txt) {
+  const b = document.getElementById('chatBody');
+  const t = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  b.innerHTML+=`<div class="msg user"><div class="av">BN</div><div><div class="bubble">${esc(txt).replace(/\n/g,'<br>')}</div><div class="bmeta">${t}</div></div></div>`;
+  b.scrollTop=b.scrollHeight;
+}
+function addAI(html) {
+  const b = document.getElementById('chatBody');
+  const t = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  b.innerHTML+=`<div class="msg ai"><div class="av">G</div><div><div class="bubble">${html}</div><div class="bmeta">Gemini 2.0 Flash • ${t} • 🧠 ${brain.docs.length} tài liệu</div></div></div>`;
+  b.scrollTop=b.scrollHeight;
+}
+function addTyping() {
+  const id='ty'+Date.now();
+  document.getElementById('chatBody').innerHTML+=`<div class="msg ai" id="${id}"><div class="av">G</div><div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div></div></div>`;
+  document.getElementById('chatBody').scrollTop=9e9; return id;
+}
+function removeTyping(id){ const e=document.getElementById(id); if(e) e.remove(); }
+
+// ══════════════════════════════════════════════
+// FILE HANDLING
+// ══════════════════════════════════════════════
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');handleFiles(e.dataTransfer.files);});
+
+async function handleFiles(files) {
+  if(!files.length) return;
+  document.getElementById('fileListCard').style.display='block';
+  document.getElementById('learnWrap').style.display='block';
+  for(const f of Array.from(files)) {
+    const id='f'+Date.now()+Math.random().toString(36).substr(2,4);
+    const ftype=getType(f.name);
+    addFI(id,f.name,ftype,f.size);
+    try {
+      const result=await readFile(f,ftype,id);
+      uploadedFiles.push({id,name:f.name,type:ftype,...result});
+      setFIStatus(id,'done','✓ Đã đọc');
+    } catch(e) { setFIStatus(id,'err','Lỗi đọc'); }
+  }
+  document.getElementById('fileCount').textContent=`(${uploadedFiles.length} file)`;
+}
+
+function getType(name) {
+  const ext=name.toLowerCase().split('.').pop();
+  if(['docx','doc'].includes(ext)) return 'word';
+  if(['xlsx','xls','csv'].includes(ext)) return 'excel';
+  if(ext==='pdf') return 'pdf';
+  if(['jpg','jpeg','png','webp','gif'].includes(ext)) return 'image';
+  return 'text';
+}
+const icons={word:'📘',excel:'📗',pdf:'📕',image:'🖼️',text:'📄'};
+function fmtSz(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';}
+
+function addFI(id,name,type,size) {
+  const list=document.getElementById('fileList');
+  const d=document.createElement('div'); d.className='fi'; d.id='fi-'+id;
+  d.innerHTML=`<div class="fi-ico">${icons[type]||'📄'}</div><div class="fi-info"><div class="fi-name">${name}</div><div class="fi-meta">${fmtSz(size)} · ${type.toUpperCase()}</div><div class="fi-bar"><div class="fi-fill" id="fp-${id}" style="width:0%"></div></div></div><span class="fi-status reading" id="fs-${id}">⏳ Đọc...</span>`;
+  list.appendChild(d);
+}
+function setProg(id,p){const e=document.getElementById('fp-'+id);if(e)e.style.width=p+'%';}
+function setFIStatus(id,cls,txt){const e=document.getElementById('fs-'+id);if(e){e.className='fi-status '+cls;e.textContent=txt;}}
+
+async function readFile(file,type,id) {
+  if(type==='word') {
+    setProg(id,30);
+    const buf=await file.arrayBuffer(); setProg(id,70);
+    const r=await mammoth.extractRawText({arrayBuffer:buf}); setProg(id,100);
+    return {content:r.value,pages:Math.ceil(r.value.length/1800),isImage:false};
+  }
+  if(type==='excel') {
+    setProg(id,30);
+    const buf=await file.arrayBuffer(); setProg(id,60);
+    const wb=XLSX.read(buf,{type:'array'}); let content='';
+    wb.SheetNames.forEach(s=>{content+=`=== ${s} ===\n${XLSX.utils.sheet_to_csv(wb.Sheets[s])}\n\n`;});
+    setProg(id,100);
+    return {content,pages:wb.SheetNames.length,isImage:false};
+  }
+  if(type==='pdf') {
+    setProg(id,20);
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let content=''; const total=pdf.numPages;
+    for(let i=1;i<=Math.min(total,25);i++){
+      const pg=await pdf.getPage(i);
+      const tc=await pg.getTextContent();
+      content+=tc.items.map(x=>x.str).join(' ')+'\n';
+      setProg(id,20+Math.round((i/Math.min(total,25))*75));
+    }
+    setProg(id,100);
+    return {content,pages:total,isImage:false};
+  }
+  if(type==='image') {
+    setProg(id,40);
+    const b64=await toBase64(file); setProg(id,100);
+    return {content:'',pages:1,isImage:true,imgBase64:b64,mediaType:file.type||'image/jpeg'};
+  }
+  // text
+  setProg(id,50);
+  const txt=await file.text(); setProg(id,100);
+  return {content:txt,pages:Math.ceil(txt.length/1800),isImage:false};
+}
+
+function toBase64(file) {
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej; r.readAsDataURL(file);
+  });
+}
+
+// ══════════════════════════════════════════════
+// LEARN ALL
+// ══════════════════════════════════════════════
+async function learnAll() {
+  if(!uploadedFiles.length){notify('Chưa có file!','err');return;}
+  if(!apiKey){notify('Nhập API key Gemini trước!','err');return;}
+  notify('🧠 Gemini đang phân tích '+uploadedFiles.length+' tài liệu...','info');
+
+  const textFiles = uploadedFiles.filter(f=>!f.isImage);
+  const imageFiles = uploadedFiles.filter(f=>f.isImage);
+  let learned=0;
+
+  // Text files
+  if(textFiles.length>0) {
+    const combined=textFiles.map(f=>`=== ${f.name} (${f.type.toUpperCase()}) ===\n${f.content.substring(0,2500)}\n`).join('\n---\n');
+    const prompt=`Phân tích các tài liệu EVNHCMC sau và trả về JSON (chỉ JSON, không markdown):
+{"styles":{"ten_phong_cach":"mo_ta"},"terms":["thuật ngữ"],"formats":["cấu trúc văn bản"],"summary":"tóm tắt kiến thức học được"}
+
+TÀI LIỆU:
+${combined}`;
+    try {
+      const raw=await callGeminiSimple(prompt);
+      const clean=raw.replace(/```json|```/g,'').trim();
+      const parsed=JSON.parse(clean);
+      Object.assign(brain.styles,parsed.styles||{});
+      brain.terms=[...new Set([...brain.terms,...(parsed.terms||[])])];
+      if(parsed.summary) brain.summary+='\n'+parsed.summary;
+      learned+=textFiles.length;
+    } catch(e){console.log('Text learn err',e);}
+  }
+
+  // Image files
+  for(const img of imageFiles) {
+    try {
+      const desc=await callGeminiWithImage(img.imgBase64,img.mediaType,
+        'Đây là tài liệu/văn bản EVNHCMC. Mô tả chi tiết: loại văn bản, cấu trúc, phong cách viết, thuật ngữ chuyên ngành. Trả lời tiếng Việt ngắn gọn.');
+      if(desc) brain.summary+='\nẢnh '+img.name+': '+desc.substring(0,300);
+      learned++;
+    } catch(e){console.log('Img learn err',e);}
+  }
+
+  brain.docs=[...brain.docs,...uploadedFiles.map(f=>f.name)];
+  brain.totalPages+=uploadedFiles.reduce((s,f)=>s+(f.pages||1),0);
+  saveBrain(); updateUI(); renderKnowledge();
+  notify(`✅ Gemini đã học xong ${learned} tài liệu! Bộ não đã cập nhật.`,'ok');
+}
+
+// ══════════════════════════════════════════════
+// COMPOSE
+// ══════════════════════════════════════════════
+async function compose() {
+  const inp=document.getElementById('cInput').value.trim();
+  const out=document.getElementById('cOutput');
+  if(!inp){out.innerHTML='<div class="ph">⚠️ Nhập nội dung cần soạn</div>';return;}
+  if(!apiKey){notify('Nhập API key Gemini trước!','err');return;}
+  out.innerHTML='<div style="text-align:center;padding:35px;"><div class="spin"></div><br><br><span style="color:var(--text2);font-size:12px;">Gemini đang soạn thảo...</span></div>';
+  const dNames={
+    'to-trinh':'TỜ TRÌNH','bao-cao':'BÁO CÁO','bien-ban':'BIÊN BẢN HỌP',
+    'cong-van':'CÔNG VĂN','quyet-dinh':'QUYẾT ĐỊNH',
+    'ho-so-thau':'HỒ SƠ MỜI THẦU','nghiem-thu':'BIÊN BẢN NGHIỆM THU'
+  };
+  const sNames={
+    'chinh-thong':'hành chính chuẩn mực, trang trọng',
+    'giam-doc':'quyết đoán, ngắn gọn, tập trung kết quả',
+    'truong-phong':'chi tiết, phân tích đầy đủ, có số liệu',
+    'ky-thuat':'kỹ thuật chuyên sâu, thuật ngữ điện lực'
+  };
+  const brainCtx=brain.docs.length>0?`\nÁp dụng kiến thức từ: ${brain.docs.slice(0,3).join(', ')}\nDùng thuật ngữ: ${brain.terms.slice(0,10).join(', ')}`:'' ;
+  const today=new Date().toLocaleDateString('vi-VN');
+  const prompt=`Soạn ${dNames[docType]||'VĂN BẢN'} theo chuẩn EVNHCMC:\n${inp}\n\nThể thức:\n- Quốc hiệu: CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM / Độc lập – Tự do – Hạnh phúc\n- Đơn vị: TỔNG CÔNG TY ĐIỆN LỰC TP.HCM\n- Ngày: ${today}, TP. Hồ Chí Minh\n- Phong cách: ${sNames[styleMode]||sNames['chinh-thong']}\n${brainCtx}\nChỉ trả về nội dung văn bản hoàn chỉnh.`;
+  try {
+    const result=await callGeminiSimple(prompt);
+    out.setAttribute('data-text',result);
+    out.innerHTML=`<button class="copy-btn" onclick="copyDoc()">📋 Sao chép</button>${esc(result).replace(/\n/g,'<br>')}`;
+    notify('✅ Soạn văn bản thành công!','ok');
+  } catch(e) {
+    out.innerHTML='<div class="ph">⚠️ Lỗi: '+e.message+'</div>';
+    notify(e.message,'err');
+  }
+}
+
+function copyDoc() {
+  const t=document.getElementById('cOutput').getAttribute('data-text');
+  if(t) navigator.clipboard.writeText(t).then(()=>{
+    document.querySelector('.copy-btn').textContent='✓ Đã sao chép!';
+    setTimeout(()=>document.querySelector('.copy-btn').textContent='📋 Sao chép',2000);
+  });
+}
+
+// ══════════════════════════════════════════════
+// BRAIN
+// ══════════════════════════════════════════════
+function saveBrain(){try{localStorage.setItem('evn_brain_gemini',JSON.stringify(brain));}catch(e){}}
+function updateUI() {
+  document.getElementById('sc-docs').textContent=brain.docs.length;
+  document.getElementById('sc-styles').textContent=Object.keys(brain.styles).length;
+  document.getElementById('sc-terms').textContent=brain.terms.length;
+  document.getElementById('sc-pages').textContent=brain.totalPages;
+  document.getElementById('hBrainCount').textContent=brain.docs.length;
+  document.getElementById('d-docs').textContent=brain.docs.length;
+  document.getElementById('d-terms').textContent=brain.terms.length;
+  document.getElementById('d-styles').textContent=Object.keys(brain.styles).length;
+  document.getElementById('d-pages').textContent=brain.totalPages;
+  const pct=Math.min(100,brain.docs.length*10);
+  document.getElementById('learnPct-bar').style.width=pct+'%';
+  document.getElementById('learnPct-val').textContent=pct+'%';
+}
+function renderKnowledge() {
+  const kc=document.getElementById('knowledgeContent');
+  if(brain.docs.length>0) {
+    kc.innerHTML=brain.docs.map(d=>`<span class="know-tag doc">📄 ${d}</span>`).join('');
+  }
+  if(brain.terms.length>0) {
+    document.getElementById('termsCard').style.display='block';
+    document.getElementById('termsContent').innerHTML=brain.terms.slice(0,60).map(t=>`<span class="know-tag term">${t}</span>`).join('');
+  }
+  if(brain.summary) {
+    document.getElementById('summaryCard').style.display='block';
+    document.getElementById('summaryContent').textContent=brain.summary.substring(0,800);
+  }
+}
+function clearBrain() {
+  if(!confirm('Xóa toàn bộ kiến thức đã học?')) return;
+  brain={docs:[],styles:{},terms:[],summary:'',totalPages:0};
+  uploadedFiles=[];
+  saveBrain(); updateUI();
+  document.getElementById('fileList').innerHTML='';
+  document.getElementById('fileListCard').style.display='none';
+  document.getElementById('learnWrap').style.display='none';
+  notify('Đã xóa bộ não','info');
+}
+function exportBrain() {
+  const blob=new Blob([JSON.stringify(brain,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='evn-brain.json'; a.click();
+  notify('💾 Đã xuất bộ não evn-brain.json — lưu lên Drive để chia sẻ','ok');
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function notify(msg,type='') {
+  const n=document.getElementById('notif');
+  n.textContent=msg; n.className='notif show '+type;
+  setTimeout(()=>n.className='notif',4500);
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Init render
+renderKnowledge();
+</script>
+</body>
+</html>
